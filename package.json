@@ -16,6 +16,8 @@
     "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {
+    "default-connector": "link:C:/Users/gefro/AppData/Local/pnpm/global/5/node_modules/dataconnect-generated/js/default-connector",
+    "firebase": "^11.6.1",
     "solid-js": "^1.9.5"
   }
 }

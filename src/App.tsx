@@ -1,11 +1,36 @@
 // App.tsx
 import { createSignal, onMount, onCleanup } from 'solid-js';
 import './global.css';
-import SampahIcon from './assets/sampah.png'
+import SampahIcon from './assets/sampah.png';
+// Import Firebase
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBpm-Zz32sEYYV2jH5f7PCP2BcDxe1HsQw",
+  authDomain: "urai-d1f1c.firebaseapp.com",
+  projectId: "urai-d1f1c",
+  storageBucket: "urai-d1f1c.firebasestorage.app",
+  messagingSenderId: "431256076213",
+  appId: "1:431256076213:web:54f6521a3d6155a4dae3fc",
+  measurementId: "G-2PHNG76BCM"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const App = () => {
   const [activeSection, setActiveSection] = createSignal('home');
   const [isMenuOpen, setIsMenuOpen] = createSignal(false);
+  
+  // Form state
+  const [name, setName] = createSignal('');
+  const [email, setEmail] = createSignal('');
+  const [message, setMessage] = createSignal('');
+  const [isSubmitting, setIsSubmitting] = createSignal(false);
+  const [formStatus, setFormStatus] = createSignal({ success: false, error: false, message: '' });
 
   // Smooth scroll to section
   const scrollToSection = (sectionId: string) => {
@@ -35,6 +60,71 @@ const App = () => {
           break;
         }
       }
+    }
+  };
+
+  // Submit form data to Firebase
+  const handleSubmit = async (e: Event) => {
+    e.preventDefault();
+    
+    // Form validation
+    if (!name() || !email() || !message()) {
+      setFormStatus({ 
+        success: false, 
+        error: true, 
+        message: 'Please fill in all fields' 
+      });
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email())) {
+      setFormStatus({ 
+        success: false, 
+        error: true, 
+        message: 'Please enter a valid email address' 
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Add data to Firestore
+      await addDoc(collection(db, "contacts"), {
+        name: name(),
+        email: email(),
+        message: message(),
+        timestamp: new Date()
+      });
+      
+      // Reset form
+      setName('');
+      setEmail('');
+      setMessage('');
+      
+      // Success message
+      setFormStatus({ 
+        success: true, 
+        error: false, 
+        message: 'Thank you for your message! We will get back to you soon.' 
+      });
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setFormStatus({ success: false, error: false, message: '' });
+      }, 5000);
+      
+    } catch (error) {
+      console.error("Error submitting form: ", error);
+      setFormStatus({ 
+        success: false, 
+        error: true, 
+        message: 'Something went wrong. Please try again later.' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -81,7 +171,7 @@ const App = () => {
         <div class="container">
           <div class="hero-content">
             <h1>Smart Waste Sorting for a Cleaner Future</h1>
-            <p>Urai helps you sort your trash correctly with  recognition, making recycling easier and more efficient than ever before.</p>
+            <p>Urai helps you sort your trash correctly with recognition, making recycling easier and more efficient than ever before.</p>
             <div class="hero-buttons">
               <button class="btn btn-primary">Get Started</button>
               <button class="btn btn-secondary">Learn More</button>
@@ -90,9 +180,9 @@ const App = () => {
           <div class="hero-image">
             <div class="image-container">
             <div
-  class="recycling-icon"
-  style={{ '--sampah-icon': `url(${SampahIcon})` }}
-></div>
+              class="recycling-icon"
+              style={{ '--sampah-icon': `url(${SampahIcon})` }}
+            ></div>
             </div>
           </div>
         </div>
@@ -225,20 +315,51 @@ const App = () => {
           </div>
           <div class="contact-container">
             <div class="contact-form">
-              <form>
+              <form onSubmit={handleSubmit}>
+                {formStatus().message && (
+                  <div class={`form-status ${formStatus().success ? 'success' : 'error'}`}>
+                    {formStatus().message}
+                  </div>
+                )}
                 <div class="form-group">
                   <label for="name">Name</label>
-                  <input type="text" id="name" placeholder="Your Name" />
+                  <input 
+                    type="text" 
+                    id="name" 
+                    placeholder="Your Name" 
+                    value={name()}
+                    onInput={(e) => setName(e.target.value)}
+                    required
+                  />
                 </div>
                 <div class="form-group">
                   <label for="email">Email</label>
-                  <input type="email" id="email" placeholder="Your Email" />
+                  <input 
+                    type="email" 
+                    id="email" 
+                    placeholder="Your Email" 
+                    value={email()}
+                    onInput={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
                 <div class="form-group">
                   <label for="message">Message</label>
-                  <textarea id="message" placeholder="Your Message"></textarea>
+                  <textarea 
+                    id="message" 
+                    placeholder="Your Message"
+                    value={message()}
+                    onInput={(e) => setMessage(e.target.value)}
+                    required
+                  ></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Send Message</button>
+                <button 
+                  type="submit" 
+                  class="btn btn-primary"
+                  disabled={isSubmitting()}
+                >
+                  {isSubmitting() ? 'Sending...' : 'Send Message'}
+                </button>
               </form>
             </div>
             <div class="contact-info">
@@ -252,8 +373,7 @@ const App = () => {
               </div>
               <div class="info-item">
                 <div class="info-icon location-icon"></div>
-                <p>   Banyumas, 
-                  Jawa Tengah 53181</p>
+                <p>Banyumas, Jawa Tengah 53181</p>
               </div>
               <div class="social-links">
                 <a href="#" class="social-icon facebook"></a>
